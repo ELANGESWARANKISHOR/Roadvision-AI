@@ -1,0 +1,33 @@
+# Virtual environment
+.venv/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# YOLO datasets
+data/
+!data/.gitkeep
+
+# Trained models
+models/
+*.pt
+*.onnx
+
+# YOLO generated results
+runs/
+
+# Test images
+*.jpg
+*.jpeg
+*.png
+
+# Environment files
+.env
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
