@@ -13,7 +13,7 @@ VEHICLE_CLASSES = {
 }
 
 
-def track_vehicles(input_path, output_path, confidence=0.001):
+def analyze_traffic_flow(input_path, output_path, confidence=0.25):
 
     video = cv2.VideoCapture(input_path)
 
@@ -33,7 +33,10 @@ def track_vehicles(input_path, output_path, confidence=0.001):
         (width, height)
     )
 
-    tracked_vehicles = {}
+    # Horizontal counting line
+    line_y = height // 2
+
+    counted_ids = set()
 
     frame_count = 0
 
@@ -57,21 +60,50 @@ def track_vehicles(input_path, output_path, confidence=0.001):
 
             tracking_ids = result.boxes.id.tolist()
             class_ids = result.boxes.cls.tolist()
+            boxes = result.boxes.xyxy.tolist()
 
-            for tracking_id, class_id in zip(
+            for tracking_id, class_id, box in zip(
                 tracking_ids,
-                class_ids
+                class_ids,
+                boxes
             ):
 
                 class_name = model.names[int(class_id)]
 
-                if class_name in VEHICLE_CLASSES:
+                if class_name not in VEHICLE_CLASSES:
+                    continue
 
-                    vehicle_id = int(tracking_id)
+                vehicle_id = int(tracking_id)
 
-                    tracked_vehicles[vehicle_id] = class_name
+                x1, y1, x2, y2 = box
+
+                center_y = (y1 + y2) / 2
+
+                if center_y > line_y:
+
+                    if vehicle_id not in counted_ids:
+
+                        counted_ids.add(vehicle_id)
 
         annotated_frame = result.plot()
+
+        cv2.line(
+            annotated_frame,
+            (0, line_y),
+            (width, line_y),
+            (255, 255, 255),
+            2
+        )
+
+        cv2.putText(
+            annotated_frame,
+            f"Vehicles crossed: {len(counted_ids)}",
+            (20, 40),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (255, 255, 255),
+            2
+        )
 
         output.write(annotated_frame)
 
@@ -83,33 +115,19 @@ def track_vehicles(input_path, output_path, confidence=0.001):
     video.release()
     output.release()
 
-    vehicle_counts = {
-        "car": 0,
-        "truck": 0,
-        "bus": 0,
-        "motorcycle": 0
-    }
-
-    for vehicle_type in tracked_vehicles.values():
-        vehicle_counts[vehicle_type] += 1
-
-    print("\nVehicle Tracking Report")
-    print("-----------------------")
-
-    for vehicle_type, count in vehicle_counts.items():
-        print(f"{vehicle_type}: {count}")
-
-    print(f"Total unique vehicles: {len(tracked_vehicles)}")
-    print(f"Total frames processed: {frame_count}")
+    print("\nTraffic Flow Analysis")
+    print("---------------------")
+    print(f"Vehicles crossed line: {len(counted_ids)}")
+    print(f"Frames processed: {frame_count}")
     print(f"Output saved to: {output_path}")
 
 
 if __name__ == "__main__":
 
     input_video = "data/test/traffic.mp4"
-    output_video = "runs/tracked_traffic.mp4"
+    output_video = "runs/traffic_flow.mp4"
 
-    track_vehicles(
+    analyze_traffic_flow(
         input_video,
         output_video
     )
